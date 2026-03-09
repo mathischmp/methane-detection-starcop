@@ -31,7 +31,7 @@ class Pipeline:
         return None
 
     
-    def load_config(self, config_path="src\config.yaml"):
+    def load_config(self, config_path="methan_detection/config.yaml"):
         with open(config_path, 'r') as file:
             config = yaml.safe_load(file)
         return config
