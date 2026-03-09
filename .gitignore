@@ -1,3 +1,10 @@
 
 data gument.pdf
 s41598-023-44918-6.pdf
+data/STARCOP_train_easy.zip
+methan_detection/__pycache__/__init__.cpython-314.pyc
+methan_detection/__pycache__/pipeline.cpython-314.pyc
+methan_detection.egg-info/dependency_links.txt
+methan_detection.egg-info/PKG-INFO
+methan_detection.egg-info/SOURCES.txt
+methan_detection.egg-info/top_level.txt

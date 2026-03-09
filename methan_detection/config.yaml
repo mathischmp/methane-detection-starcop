@@ -1,0 +1,8 @@
+project:
+  name: "methane-detection-starcop"
+  experiment_name: "segformer-b0-v1"
+
+storage:
+  drive_data_easy_train: "https://drive.google.com/uc?id=1C4ZHvT1ZPKVMFGmqcV12Aozs8Uv_DIxD"
+  drive_data_test : "https://drive.google.com/uc?id=1TwtSVpbvGd-lWfIjQrw0i4LqkiX2EuHq"
+  local_raw_path: "./data"
