@@ -1,4 +1,4 @@
-import pandas
+import pandas as pd
 import yaml
 import gdown
 import os
@@ -7,7 +7,8 @@ from tqdm import tqdm
 #from dataset import Dataset
 import rasterio
 import numpy as np
-    
+from sklearn.model_selection import StratifiedGroupKFold
+
 class Pipeline:
     
     def __init__(self, training_type):
@@ -22,9 +23,8 @@ class Pipeline:
         #self.donwload_data_from_drive()
         #self.load_data()
         df = self.load_csv()
-        self.create_dataset(df)
-        input_data = self.data_preprocessing(df)
-        return input_data
+        df = self.create_folds(df)
+        return df
    
 
     def donwload_data_from_drive(self):
@@ -69,59 +69,39 @@ class Pipeline:
     
     def load_csv(self):
         csv_path = os.path.join('..', self.config['storage']['local_raw_path'], f'STARCOP_train_{self.training_type}', f'train_{self.training_type}.csv')
-        
-        df = pandas.read_csv(csv_path)
+        print(f"Loading CSV file from {csv_path}...")
+        df = pd.read_csv(csv_path)
         
         return df
     
 
-    def data_preprocessing(self, df): 
-        folder = os.path.join('..', self.config['storage']['local_raw_path'], f'STARCOP_train_{self.training_type}')
-        size_read = 300
+    def create_folds(self, df: pd.DataFrame):
+        n_folds = self.config['training']['n_folds']
+        df['fold'] = -1
+        num_bins = min(10, int(np.floor(1 + np.log2(len(df)))))
+        print(f"Stratifying qplume into {num_bins} bins")
+
+        df['total_bin'] = pd.cut(
+            df['qplume'], 
+            bins=num_bins, 
+            labels=False,
+            duplicates='drop'  # Remove duplicate edges
+)       
+        df['date'] = pd.to_datetime(df['date'])
+        df["date"] = df["date"].dt.day
         
-        input_data = []
-        for idx, event_id in enumerate(list(df["id"])):
-            ft = os.path.join(folder, event_id)
-            aviris_r = os.path.join(ft, "TOA_AVIRIS_640nm.tif")
-            aviris_g = os.path.join(ft, "TOA_AVIRIS_550nm.tif")
-            aviris_b = os.path.join(ft, "TOA_AVIRIS_460nm.tif")
-            magic_path = os.path.join(ft, "mag1c.tif")
-            # Ground truth:
-            gt_path = os.path.join(ft, "labelbinary.tif")
+        X = df['id']
+        Y = df['total_bin']
+        groups = df['date']
+        
+        skf = StratifiedGroupKFold(n_splits=n_folds, shuffle=True, random_state=42)
+        for fold, (train_idx, val_idx) in enumerate(skf.split(X, Y, groups)):
+            df.loc[val_idx, 'fold'] = fold
+        
+        print("\nFold distribution:")
+        print(df['fold'].value_counts().sort_index())
 
-            with rasterio.open(gt_path) as src:
-                width = src.width
-                height = src.height
-
-                # Compute shape to read to from pyramids and speed up plotting
-                shape = src.shape
-                if (size_read >= shape[0]) and (size_read >= shape[1]):
-                    out_shape = shape
-                elif shape[0] > shape[1]:
-                    out_shape = (size_read, int(round(shape[1]/shape[0] * size_read)))
-                else:
-                    out_shape = (int(round(shape[0] / shape[1] * size_read)), size_read)
-                gt = src.read(1, out_shape=out_shape)
-
-            with rasterio.open(magic_path) as src:
-                magic = src.read(1, out_shape=out_shape)
-            with rasterio.open(aviris_r) as src:
-                r = src.read(1, out_shape=out_shape)
-            with rasterio.open(aviris_g) as src:
-                g = src.read(1, out_shape=out_shape)
-            with rasterio.open(aviris_b) as src:
-                b = src.read(1, out_shape=out_shape)
-
-            row = [r, g, b, magic, gt]
-            input_data.append(row)
-                            
-        return np.array(input_data)
-
-
-    def create_dataset(self, df):
-
-       
-        None #later
+        return df
          
 
     
