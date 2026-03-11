@@ -6,21 +6,23 @@ storage:
   drive_data_easy_train: "https://drive.google.com/uc?id=1C4ZHvT1ZPKVMFGmqcV12Aozs8Uv_DIxD"
   drive_data_test : "https://drive.google.com/uc?id=1TwtSVpbvGd-lWfIjQrw0i4LqkiX2EuHq"
   local_raw_path: "data"
+  local_results_path: "results"
 
 
 training:
   n_folds: 5
   batch_size: 8
-  n_total_epochs: 20
-  n_epochs_before_unfreeze: 5
+  n_total_epochs: 4
+  n_epochs_before_unfreeze: 2
   warmup_epochs: 3
-  head_lr: 1e-4
+  freeze_lr: 1e-3
+  unfreeze_lr: 1e-4
   weight_decay: 1e-5
   img_size: 512
   num_workers: 1
   device: "cuda"
   loss: "dice"  #or "cross_entropy" or "focal" or "combined"
   model: "EfficientNetV2"
-  method: "stacking"
+  method: "concat"
 
   

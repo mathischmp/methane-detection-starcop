@@ -9,15 +9,30 @@ from .dataset import Dataset
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import math
+from tqdm.auto import tqdm
+import numpy as np
+from .methaneLogger import MethaneLogger
+
 
 class Trainer:
     
-    def __init__(self, model, df):
+    def __init__(self, model, df, num_xp = 1):
         self.config = self.load_config()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = model.to(self.device)
         self.data_transformer = visionDataTransformer.VisionDataTransformer()   
         self.df = df
+        self.method = self.config['training']['method']
+        self.logger = MethaneLogger(self.config, self.model.get_name(), num_xp)
+        
+        self.result_folder = os.path.join('..', self.config['storage']['local_results_path'], f'results_{self.model.get_name()}')
+        os.makedirs(self.result_folder, exist_ok=True)
+
+        self.result_folder = os.path.join(self.result_folder, f'results_xp_{num_xp}')
+        os.makedirs(self.result_folder, exist_ok=True)
+
+        self.result_folder = os.path.join(self.result_folder, 'models')
+        os.makedirs(self.result_folder, exist_ok=True)
 
         if self.config['training']['loss'] == "dice":
             self.criterion = dice_loss.MethaneDiceLoss()
@@ -34,6 +49,11 @@ class Trainer:
             config = yaml.safe_load(file)
         return config
     
+    def dice_coef(self, groundtruth_mask, pred_mask):
+        intersect = np.sum(pred_mask*groundtruth_mask)
+        total_sum = np.sum(pred_mask) + np.sum(groundtruth_mask)
+        dice = np.mean(2*intersect/total_sum)
+        return round(dice, 3) #round up to 3 decimal places
     
     def get_train_valid_from_fold(self, df, n_fold : int):
         assert n_fold <= self.config['training']['n_folds']
@@ -48,19 +68,20 @@ class Trainer:
         total_loss = 0
         optimizer.zero_grad()
 
-        method = self.config['training']['method']
 
+        for rgb,mag1c,gt,qplume in train_loader:
 
-        for r,g,b,mag1c,gt,qplume in train_loader:
-
-            match method:
-                case "stacking": 
-                    inputs = torch.stack([r,g,b,mag1c], dim=1).to(self.device)
+            match self.method:
+                case "concat": 
+                    if mag1c.dim() == 3: 
+                         mag1c = mag1c.unsqueeze(1)
+                    inputs = torch.cat([rgb, mag1c], dim=1).to(self.device)
             
             gt = gt.to(self.device)
 
             pred = self.model(inputs).squeeze(1)
             loss = self.criterion(pred, gt)
+            
             loss.backward()
             total_loss += loss.item()
 
@@ -70,7 +91,34 @@ class Trainer:
         return total_loss / len(train_loader)
 
 
+    def validate_one_epoch(self, valid_loader):
+        total_loss = 0
+        self.model.smp_model.eval()
+        dice_score = 0
+
+        with torch.no_grad():
+            for rgb,mag1c,gt,qplume in valid_loader:
+                match self.method:
+                    case "concat": 
+                        if mag1c.dim() == 3: 
+                            mag1c = mag1c.unsqueeze(1)
+                        inputs = torch.cat([rgb, mag1c], dim=1).to(self.device)
+                gt = gt.to(self.device)
+
+                pred = self.model(inputs).squeeze(1)
+                loss = self.criterion(pred, gt)
+                total_loss += loss.item()
+                dice_score += self.dice_coef(gt.cpu().numpy(), (pred.sigmoid().cpu().numpy() > 0.5).astype(np.float32))
+        
+        return total_loss / len(valid_loader), dice_score / len(valid_loader)
+
+
+
     def validate_one_fold(self, df, n_fold : int): 
+        best_validation_loss = float('inf')
+        self.logger.set_fold(n_fold)
+
+        model_dict_path = os.path.join(self.result_folder, f"best_{self.model.get_name()}_fold_{n_fold}.pth")
 
         train_dataset, valid_dataset = self.get_train_valid_from_fold(df, n_fold)
         
@@ -78,36 +126,90 @@ class Trainer:
             train_dataset, 
             batch_size=self.config['training']['batch_size'], 
             shuffle=True, num_workers=self.config['training']['num_workers'],
-            pin_memory=True)
+            pin_memory=False)
         
         valid_loader = DataLoader(
             valid_dataset, batch_size=self.
             config['training']['batch_size'], 
             shuffle=False, num_workers=self.config['training']['num_workers'],
-            pin_memory=True)
+            pin_memory=False)
         
         self.model.smp_model.train()
         for param in self.model.smp_model.encoder.parameters():
             param.requires_grad = False
         
+        wd = float(self.config['training']['weight_decay'])
+
         optimizer = optim.Adam(
             filter(lambda p: p.requires_grad, self.model.parameters()),
-            lr=float(self.config['training']['head_lr']),
-            weight_decay = float(self.config['training']['weight_decay'])
+            lr=float(self.config['training']['freeze_lr']),
+            weight_decay = wd
         )
 
-        scheduler = self.methan_scheduler(optimizer, int(self.config['training']['n_total_epochs']))
+        scheduler = self.methan_scheduler(optimizer, int(self.config['training']['n_epochs_before_unfreeze']))
 
-        print(f'\n=== Fold {n_fold} | Phase 1: Backbone Frozen ===')
+        print(f'\n=== Fold {n_fold} | Phase 1: Encoder Frozen ===')
 
-        for n in range(self.config['training']['n_epochs_before_unfreeze']):
+        n_epochs = self.config['training']['n_epochs_before_unfreeze']
+        pbar = tqdm(range(n_epochs), desc=f"Fold {n_fold}", unit="epoch")
+
+        for n in pbar:
             train_loss = self.train_one_epoch(train_loader, optimizer)
-            
-            #val_loss, val_iou = self.validate(valid_loader)
+            val_loss, dice_score = self.validate_one_epoch(valid_loader)
             scheduler.step()
-            print(f"Epoch {n} | Train Loss: {train_loss:.4f} | LR: {scheduler.get_last_lr()[0]:.6f}")
+            pbar.set_postfix({
+                "T-Loss": f"{train_loss:.4f}",
+                "V-Loss": f"{val_loss:.4f}",
+                "LR": f"{scheduler.get_last_lr()[0]:.1e}"
+            })
+            pbar.update(1)
 
+            if val_loss < best_validation_loss:
+                best_validation_loss = val_loss
+                torch.save(self.model.state_dict(), model_dict_path)
+            
+            self.logger.log_metrics(epoch=n, train_loss=train_loss, val_loss=val_loss, dice_score=dice_score)
 
+        for param in self.model.smp_model.encoder.parameters():
+            param.requires_grad = True
+        
+        decoder_lr = float(self.config['training']['unfreeze_lr'])
+        encoder_lr = decoder_lr * 0.1
+        
+
+        head_params = list(self.model.smp_model.decoder.parameters()) + list(self.model.smp_model.segmentation_head.parameters())
+
+        optimizer = optim.Adam([
+            {'params': self.model.smp_model.encoder.parameters(), 'lr': encoder_lr, 'weight_decay': wd}, 
+            {'params': head_params, 'lr': decoder_lr, 'weight_decay': wd}
+        ]
+        )
+
+        scheduler = self.methan_scheduler(optimizer, int(self.config['training']['n_epochs_before_unfreeze']))
+
+        print(f'\n=== Fold {n_fold} | Phase 2: Encoder Unfrozen ===')
+
+        n_epochs = self.config['training']['n_total_epochs'] - self.config['training']['n_epochs_before_unfreeze']
+        pbar = tqdm(range(n_epochs), desc=f"Fold {n_fold}", unit="epoch")
+
+        for n in pbar:
+            train_loss = self.train_one_epoch(train_loader, optimizer)
+            val_loss, dice_score = self.validate_one_epoch(valid_loader)
+            scheduler.step()
+            pbar.set_postfix({
+                "T-Loss": f"{train_loss:.4f}",
+                "V-Loss": f"{val_loss:.4f}",
+                "LR": f"{scheduler.get_last_lr()[0]:.1e}"
+            })
+            pbar.update(1)
+
+            if val_loss < best_validation_loss:
+                best_validation_loss = val_loss
+                torch.save(self.model.state_dict(), model_dict_path)
+            
+            self.logger.log_metrics(epoch=n + self.config['training']['n_epochs_before_unfreeze'], train_loss=train_loss, val_loss=val_loss, dice_score=dice_score)
+        
+        self.logger.finish_fold()
         return None
 
 
@@ -131,4 +233,5 @@ class Trainer:
         for n_fold in range(self.config['training']['n_folds']):
             self.validate_one_fold(self.df, n_fold)
         
+        self.logger.finalize_global_report()
         return None

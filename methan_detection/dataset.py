@@ -1,11 +1,14 @@
 import os
 import rasterio
 import torch
+from .visionDataTransformer import VisionDataTransformer
+import numpy as np
 
 class Dataset:
     def __init__(self, config, labels, training_type, transform = False):
         self.labels = labels
         self.transform = transform
+        self.visionAugmentation = VisionDataTransformer()
         self.config = config
         self.training_type = training_type
 
@@ -15,12 +18,14 @@ class Dataset:
     def __getitem__(self, idx):
         event_id = self.labels['id'].values[idx]
         qplume = self.labels['qplume'].values[idx]
-        r,g,b,magic,gt = self.image_preprocessing(event_id)
+        rgb,mag1c,gt = self.image_preprocessing(event_id)
 
         if self.transform:
-            None #later
+            rgb, mag1c, gt = self.visionAugmentation.transform(image=rgb, mag1c=mag1c, mask=gt)
         
-        return r,g,b,magic,gt,qplume
+        else:
+            rgb, mag1c, gt = self.visionAugmentation.transform_for_validation(image=rgb, mag1c=mag1c, mask=gt)
+        return rgb,mag1c,gt,qplume
     
 
     def image_preprocessing(self, event_id): 
@@ -45,15 +50,20 @@ class Dataset:
                 out_shape = (size_read, int(round(shape[1]/shape[0] * size_read)))
             else:
                 out_shape = (int(round(shape[0] / shape[1] * size_read)), size_read)
-            gt = torch.tensor(src.read(1, out_shape=out_shape), dtype=torch.float32)
+            gt = src.read(1, out_shape=out_shape)
 
         with rasterio.open(magic_path) as src:
-            magic = torch.tensor(src.read(1, out_shape=out_shape), dtype=torch.float32)
+            mag1c = src.read(1, out_shape=out_shape)
         with rasterio.open(aviris_r) as src:
-            r = torch.tensor(src.read(1, out_shape=out_shape), dtype=torch.float32)
+            r = src.read(1, out_shape=out_shape)
         with rasterio.open(aviris_g) as src:
-            g = torch.tensor(src.read(1, out_shape=out_shape), dtype=torch.float32)
+            g = src.read(1, out_shape=out_shape)
         with rasterio.open(aviris_b) as src:
-            b = torch.tensor(src.read(1, out_shape=out_shape), dtype=torch.float32) 
+            b = src.read(1, out_shape=out_shape)
+
+
+        rgb = np.stack([r, g, b], axis=-1).astype(np.float32)
+        mag1c = np.asarray(mag1c).astype(np.float32)
+        gt = np.asarray(gt).astype(np.float32)
         
-        return r,g,b,magic,gt
+        return rgb,mag1c,gt

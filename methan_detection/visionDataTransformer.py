@@ -24,3 +24,10 @@ class VisionDataTransformer:
         augmented = transform(image=image, mag1c=mag1c, mask=mask)
         
         return augmented['image'], augmented['mag1c'], augmented['mask']
+    
+    def transform_for_validation(self, image, mag1c, mask=None):
+        transform = A.Compose([A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]), ToTensorV2()], additional_targets={'mag1c': 'image'})
+        
+        augmented = transform(image=image, mag1c=mag1c, mask=mask)
+        
+        return augmented['image'], augmented['mag1c'], augmented['mask']

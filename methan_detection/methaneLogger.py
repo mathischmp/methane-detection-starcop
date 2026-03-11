@@ -7,16 +7,16 @@ from datetime import datetime
 import shutil
 
 class MethaneLogger:
-    def __init__(self, config, base_path="outputs/runs"):
+    def __init__(self, config, model_name, num_xp):
         # Création d'un ID unique pour l'expérience
         timestamp = datetime.now().strftime("%Y-%m-%d_%Hh%M")
-        exp_name = config.get("project", {}).get("experiment_name", "exp")
-        self.run_dir = os.path.join(base_path, f"{exp_name}_{timestamp}")
+        
+        self.run_dir = os.path.join('..', config['storage']['local_results_path'], f"results_{model_name}", f"results_xp_{num_xp}", "logs")
         os.makedirs(self.run_dir, exist_ok=True)
         
         # Sauvegarde de la config pour la postérité
         with open(os.path.join(self.run_dir, "config_backup.json"), "w") as f:
-            json.dump(config, f, indent=4)
+            json.dump(config['training'], f, indent=4)
             
         self.history = [] # Liste de dictionnaires pour le résumé global
         self.current_fold = None
@@ -29,16 +29,16 @@ class MethaneLogger:
         os.makedirs(os.path.join(self.fold_dir, "samples"), exist_ok=True)
         self.fold_metrics = []
 
-    def log_metrics(self, epoch, train_loss, val_loss, val_iou):
+    def log_metrics(self, epoch, train_loss, val_loss, dice_score):
         """Enregistre les métriques d'une époque."""
         metrics = {
             "epoch": epoch,
             "train_loss": train_loss,
             "val_loss": val_loss,
-            "val_iou": val_iou
+            "dice_score": dice_score
         }
         self.fold_metrics.append(metrics)
-        print(f"[Fold {self.current_fold} | Epoch {epoch}] Loss: {val_loss:.4f} | IoU: {val_iou:.4f}")
+        #print(f"[Fold {self.current_fold} | Epoch {epoch}] Loss: {val_loss:.4f} | Dice Score: {dice_score:.4f}")
 
     def save_checkpoint(self, model, is_best=False):
         """Sauvegarde les poids du modèle."""
@@ -77,14 +77,14 @@ class MethaneLogger:
         plt.close()
 
         # On garde la meilleure métrique du pli pour le résumé global
-        best_val_iou = df['val_iou'].max()
-        self.history.append({"fold": self.current_fold, "best_val_iou": best_val_iou})
+        best_dice_score = df['dice_score'].max()
+        self.history.append({"fold": self.current_fold, "best_dice_score": best_dice_score})
 
     def finalize_global_report(self):
         """Calcule la performance moyenne sur tous les plis."""
         df_global = pd.DataFrame(self.history)
-        mean_iou = df_global['best_val_iou'].mean()
-        std_iou = df_global['best_val_iou'].std()
+        mean_iou = df_global['best_dice_score'].mean()
+        std_iou = df_global['best_dice_score'].std()
         
         summary = f"CV Performance: {mean_iou:.4f} (+/- {std_iou:.4f})"
         with open(os.path.join(self.run_dir, "global_summary.txt"), "w") as f:

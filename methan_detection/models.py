@@ -52,6 +52,9 @@ class EfficientNetV2(nn.Module):
 
     def forward(self, x):
         return self.smp_model(x)
+    
+    def get_name(self):
+        return "EfficientNetV2"
 
 class MiT(nn.Module):
     def __init__(self, num_classes=1, pretrained=True, in_channels=4):
