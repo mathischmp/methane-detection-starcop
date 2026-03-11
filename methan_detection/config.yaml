@@ -12,14 +12,14 @@ storage:
 training:
   n_folds: 5
   batch_size: 8
-  n_total_epochs: 4
-  n_epochs_before_unfreeze: 2
+  n_total_epochs: 20
+  n_epochs_before_unfreeze: 5
   warmup_epochs: 3
   freeze_lr: 1e-3
   unfreeze_lr: 1e-4
   weight_decay: 1e-5
   img_size: 512
-  num_workers: 1
+  num_workers: 4
   device: "cuda"
   loss: "dice"  #or "cross_entropy" or "focal" or "combined"
   model: "EfficientNetV2"

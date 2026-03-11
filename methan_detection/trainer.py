@@ -49,11 +49,15 @@ class Trainer:
             config = yaml.safe_load(file)
         return config
     
-    def dice_coef(self, groundtruth_mask, pred_mask):
-        intersect = np.sum(pred_mask*groundtruth_mask)
-        total_sum = np.sum(pred_mask) + np.sum(groundtruth_mask)
-        dice = np.mean(2*intersect/total_sum)
-        return round(dice, 3) #round up to 3 decimal places
+    def dice_coef_torch(self, pred, gt, smooth=1e-6):
+        #On GPU
+        pred = (torch.sigmoid(pred) > 0.5).float()
+        gt = gt.float()
+        
+        intersection = (pred * gt).sum()
+        dice = (2. * intersection + smooth) / (pred.sum() + gt.sum() + smooth)
+        
+        return dice.item()
     
     def get_train_valid_from_fold(self, df, n_fold : int):
         assert n_fold <= self.config['training']['n_folds']
@@ -67,7 +71,7 @@ class Trainer:
     def train_one_epoch(self, train_loader, optimizer):
         total_loss = 0
         optimizer.zero_grad()
-
+        self.model.smp_model.train()
 
         for rgb,mag1c,gt,qplume in train_loader:
 
@@ -108,7 +112,7 @@ class Trainer:
                 pred = self.model(inputs).squeeze(1)
                 loss = self.criterion(pred, gt)
                 total_loss += loss.item()
-                dice_score += self.dice_coef(gt.cpu().numpy(), (pred.sigmoid().cpu().numpy() > 0.5).astype(np.float32))
+                dice_score += self.dice_coef(gt, pred)
         
         return total_loss / len(valid_loader), dice_score / len(valid_loader)
 
