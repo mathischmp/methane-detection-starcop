@@ -3,18 +3,19 @@ import rasterio
 import torch
 
 class Dataset:
-    def __init__(self, labels, transform = False):
+    def __init__(self, config, labels, training_type, transform = False):
         self.labels = labels
         self.transform = transform
+        self.config = config
+        self.training_type = training_type
 
     def __len__(self):
         return len(self.labels)
     
     def __getitem__(self, idx):
-        label = self.labels[idx]
-        event_id = label['id']
-        qplume = label['qplume']
-        r,g,b,magic,gt = self.image_preprocessing(event_id, idx)
+        event_id = self.labels['id'].values[idx]
+        qplume = self.labels['qplume'].values[idx]
+        r,g,b,magic,gt = self.image_preprocessing(event_id)
 
         if self.transform:
             None #later

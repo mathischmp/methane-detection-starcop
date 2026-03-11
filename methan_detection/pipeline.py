@@ -4,15 +4,12 @@ import gdown
 import os
 import zipfile
 from tqdm import tqdm
-#from dataset import Dataset
 import rasterio
 import numpy as np
 from sklearn.model_selection import StratifiedGroupKFold
 
 from methan_detection import models
-from dataset import Dataset
-from trainer import Trainer
-
+from .trainer import Trainer
 class Pipeline:
     
     def __init__(self, training_type):
@@ -22,7 +19,7 @@ class Pipeline:
         self.config = self.load_config()
         self.training_type = training_type
 
-        self.model = self.setup_model(model_type=self.config['model']['type'])
+        self.model = self.setup_model(model_type=self.config['training']['model'])
 
 
     def run(self):
@@ -30,8 +27,7 @@ class Pipeline:
         #self.load_data()
         df = self.load_csv()
         df = self.create_folds(df)
-        dataset = Dataset(labels = df, transform = True)
-        trainer = Trainer(model=self.model, dataset=dataset)
+        trainer = Trainer(model=self.model, df=df)
         trainer.run()
         return df
    
