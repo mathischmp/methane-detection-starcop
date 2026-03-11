@@ -10,3 +10,4 @@ methan_detection.egg-info/SOURCES.txt
 methan_detection.egg-info/top_level.txt
 data/
 notebooks/train_easy.csv
+.venv/
