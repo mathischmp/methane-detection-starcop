@@ -17,7 +17,7 @@ training:
   img_size: 512
   num_workers: 4
   device: "cuda"
-  loss: "dice_loss"
+  loss: "dice"  #or "cross_entropy" or "focal" or "combined"
   model:
     name: "segformer_b0"
     pretrained: true

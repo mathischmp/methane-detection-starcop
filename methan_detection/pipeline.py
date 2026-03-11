@@ -9,6 +9,10 @@ import rasterio
 import numpy as np
 from sklearn.model_selection import StratifiedGroupKFold
 
+from methan_detection import models
+from dataset import Dataset
+from trainer import Trainer
+
 class Pipeline:
     
     def __init__(self, training_type):
@@ -17,13 +21,18 @@ class Pipeline:
 
         self.config = self.load_config()
         self.training_type = training_type
-    
+
+        self.model = self.setup_model(model_type=self.config['model']['type'])
+
 
     def run(self):
         #self.donwload_data_from_drive()
         #self.load_data()
         df = self.load_csv()
         df = self.create_folds(df)
+        dataset = Dataset(labels = df, transform = True)
+        trainer = Trainer(model=self.model, dataset=dataset)
+        trainer.run()
         return df
    
 
@@ -104,4 +113,16 @@ class Pipeline:
         return df
          
 
+    def setup_model(self, model_type="EfficientNetV2"):
+        
+        match model_type:
+            case "EfficientNetV2":
+                model = models.EfficientNetV2(num_classes=1, pretrained=True, in_channels=4)
+            case "MiT":
+                model = models.MiT(num_classes=1, pretrained=True, in_channels=4)
+            case "ConvNext":
+                model = models.ConvNext(num_classes=1, pretrained=True, in_channels=4)
+            case _:
+                raise ValueError(f"Unknown model type: {model_type}")
+        return model
     
