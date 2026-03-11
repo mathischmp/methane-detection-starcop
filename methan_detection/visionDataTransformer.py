@@ -14,13 +14,13 @@ class VisionDataTransformer:
         A.RandomBrightnessContrast(
         p=0.5),
         A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]), 
-        ToTensorV2()])
+        ToTensorV2()], additional_targets={'mag1c': 'image'})
         
         return transform 
     
-    def transform(self, image):
+    def transform(self, image, mag1c, mask=None):
         transform = self.data_augmentation_pipeline()
         
-        augmented = transform(image=image)
+        augmented = transform(image=image, mag1c=mag1c, mask=mask)
         
-        return augmented['image']
+        return augmented['image'], augmented['mag1c'], augmented['mask']
