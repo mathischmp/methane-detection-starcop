@@ -72,8 +72,10 @@ if predict_btn:
     with st.spinner("🧠 Le modèle analyse les données Sentinel-2..."):
         with torch.no_grad():
             pred = model(input.unsqueeze(0))
-        pred = torch.sigmoid(pred).squeeze().cpu().numpy()
-        gt = gt.squeeze().cpu().numpy()
+        pred = torch.sigmoid(pred).cpu().numpy().squeeze()
+        pred_binary = (pred > threshold).astype(np.uint8)
+        print(np.any(pred > 0))
+        gt = gt.cpu().numpy().squeeze()
 
     tab1, tab2 = st.tabs(["📊 Analyse Superposée", "🔍 Comparaison Côte-à-Côte"])
 
@@ -83,7 +85,7 @@ if predict_btn:
         empty_l, col_img, empty_r = st.columns([1, 2, 1])
 
         with col_img:
-            fig = plot_overlay_analysis(rgb_sample, pred, gt)
+            fig = plot_overlay_analysis(rgb_sample, pred_binary, gt)
             st.pyplot(fig, use_container_width=True)
             
             st.markdown("""
@@ -98,7 +100,7 @@ if predict_btn:
         empty_l, col_a, col_b, empty_r = st.columns([1, 2, 2, 1])
 
         with col_a:
-            st.image(pred, caption="Prédiction du modèle", use_container_width=True)
+            st.image(pred_binary * 255, caption="Prédiction du modèle", use_container_width=True)
 
         with col_b:
             st.image(gt, caption="Ground Truth (Réalité)", use_container_width=True)
