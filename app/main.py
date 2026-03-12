@@ -38,7 +38,7 @@ with st.sidebar:
     rgb_sample, mag1c_sample = get_images_from_id_for_display(selected_id)
 
     st.subheader("2. Configuration Modèle")
-    selected_fold = st.selectbox("Sélectionner le Fold", [0, 1, 2, 3, 4, "Ensemble (Moyenne)"])
+    selected_fold = st.selectbox("Sélectionner le modèle", ['EfficientNetV2'])
     
     threshold = st.slider("Seuil de détection (Confidence)", 0.1, 0.9, 0.5, 0.05)
     
@@ -54,12 +54,12 @@ col1, col2 = st.columns(2)
 with col1:
     st.subheader("📷 Image RGB (Sentinel-2)")
 
-    st.image(rgb_sample, use_column_width=True, caption="Visible")
+    st.image(rgb_sample, use_column_width=True, caption="RGB 640 nm - 550 nm - 460 nm")
 
 with col2:
     st.subheader("🔬 Filtre MAG1C")
 
-    st.image(mag1c_sample, use_column_width=True, caption="Signature Infrarouge")
+    st.image(mag1c_sample, use_column_width=True, caption="Filtre MAG1C - Intensité du panache de méthane")
 
 st.divider()
 
@@ -103,6 +103,6 @@ if predict_btn:
         with col_b:
             st.image(gt, caption="Ground Truth (Réalité)", use_container_width=True)
     with st.expander("ℹ️ Informations techniques sur le modèle"):
-        st.write(f"Modèle : Unet-Mamba | Fold : {selected_fold} | Seuil : {threshold}")
+        st.write(f"Modèle : EfficientNetV2 | Nombre de folds: 5 ")
 else:
     st.info("Sélectionnez un événement et cliquez sur 'Lancer la détection' pour voir le résultat.")
