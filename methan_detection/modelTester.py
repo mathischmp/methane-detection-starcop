@@ -89,10 +89,8 @@ class ModelTester:
     def get_all_ground_truths(self, test_loader):
         all_gts = []
         for rgb, mag1c, gt, qplume in test_loader:
-            # Dans ton cas : r, g, b, mag1c, gt, qplume
             all_gts.append(gt.cpu())
         
-        # On concatène tout pour avoir une liste de masques [N, H, W]
         return torch.cat(all_gts, dim=0)
 
     def compute_final_dice_score(self, preds, gts, smooth=1e-6):
@@ -100,18 +98,15 @@ class ModelTester:
         preds: Tenseur binaire [N, H, W] ou [N, 1, H, W]
         gts: Tenseur binaire [N, H, W] ou [N, 1, H, W]
         """
-        # On s'assure que tout est au format float et aplati par image
+
         preds = preds.float().view(preds.size(0), -1)
         gts = gts.float().view(gts.size(0), -1)
 
-        # Calcul de l'intersection et des sommes par image (dim=1)
         intersection = (preds * gts).sum(dim=1)
         total_sum = preds.sum(dim=1) + gts.sum(dim=1)
 
-        # Dice par image
         dice_per_image = (2. * intersection + smooth) / (total_sum + smooth)
 
-        # Moyenne finale
         mean_dice = dice_per_image.mean().item()
         
         return mean_dice
@@ -125,8 +120,6 @@ class ModelTester:
         # 1. Sélection aléatoire des indices
         indices = random.sample(range(len(preds)), n)
         
-        # 2. Définition des couleurs (RGBA)
-        # TN: Gris clair | FP: Rouge | FN: Jaune/Orange | TP: Vert
         colors = ["#4b4b4b", '#e74c3c', '#f1c40f', '#2ecc71']
         cmap = ListedColormap(colors)
         
@@ -137,15 +130,12 @@ class ModelTester:
             p = preds[idx].squeeze().numpy() if torch.is_tensor(preds) else preds[idx]
             g = gts[idx].squeeze().numpy() if torch.is_tensor(gts) else gts[idx]
             
-            # 3. Calcul de la carte d'erreur
-            # On crée une image vide (0 = TN par défaut)
             error_map = np.zeros_like(p, dtype=int)
             
             error_map[(p == 1) & (g == 0)] = 1  # False Positive (Rouge)
             error_map[(p == 0) & (g == 1)] = 2  # False Negative (Jaune)
             error_map[(p == 1) & (g == 1)] = 3  # True Positive (Vert)
             
-            # 4. Calcul d'un Dice local pour l'échantillon
             intersect = np.sum((p == 1) & (g == 1))
             dice = (2. * intersect) / (np.sum(p) + np.sum(g) + 1e-6)
 
