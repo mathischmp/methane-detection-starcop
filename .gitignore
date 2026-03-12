@@ -6,3 +6,4 @@ notebooks/train_easy.csv
 .venv/
 methan_detection/__pycache__/
 results/
+app/__pycache__/
