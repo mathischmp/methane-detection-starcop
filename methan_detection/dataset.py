@@ -5,12 +5,13 @@ from .visionDataTransformer import VisionDataTransformer
 import numpy as np
 
 class Dataset:
-    def __init__(self, config, labels, training_type, transform = False):
+    def __init__(self, config, labels, training_type, transform = False , test = False):
         self.labels = labels
         self.transform = transform
         self.visionAugmentation = VisionDataTransformer()
         self.config = config
         self.training_type = training_type
+        self.test = test
 
     def __len__(self):
         return len(self.labels)
@@ -29,7 +30,10 @@ class Dataset:
     
 
     def image_preprocessing(self, event_id): 
-        folder = os.path.join('..', self.config['storage']['local_raw_path'], f'STARCOP_train_{self.training_type}')
+        if self.test:
+            folder = os.path.join('..', self.config['storage']['local_raw_path'], 'STARCOP_test')
+        else:
+            folder = os.path.join('..', self.config['storage']['local_raw_path'], f'STARCOP_train_{self.training_type}')
         size_read = 300
         
         ft = os.path.join(folder, event_id)

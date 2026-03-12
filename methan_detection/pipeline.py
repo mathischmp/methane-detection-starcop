@@ -7,19 +7,21 @@ from tqdm import tqdm
 import rasterio
 import numpy as np
 from sklearn.model_selection import StratifiedGroupKFold
+from .utils import setup_model, load_config
 
 from methan_detection import models
 from .trainer import Trainer
+
 class Pipeline:
     
     def __init__(self, training_type):
         
         assert training_type in ["easy", "hard"]
 
-        self.config = self.load_config()
+        self.config = load_config()
         self.training_type = training_type
         self.n_xp = self.config['training']['num_xp']
-        self.model = self.setup_model(model_type=self.config['training']['model'])
+        self.model = setup_model(model_type=self.config['training']['model'])
 
 
     def run(self):
@@ -29,7 +31,7 @@ class Pipeline:
         df = self.create_folds(df)
         trainer = Trainer(model=self.model, df=df, n_xp=self.n_xp)
         trainer.run()
-        return df
+        return None
    
 
     def donwload_data_from_drive(self):
@@ -46,17 +48,6 @@ class Pipeline:
         else:
                 print("Les données sont déjà présentes.")
         return None
-
-    
-    def load_config(self, config_path=None):
-        if config_path is None:
-            config_path = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "config.yaml"
-            )
-        with open(config_path, 'r') as file:
-            config = yaml.safe_load(file)
-        return config
     
     def load_data(self):
         dataset_folder = self.config['storage']['local_raw_path']
@@ -108,17 +99,4 @@ class Pipeline:
 
         return df
          
-
-    def setup_model(self, model_type="EfficientNetV2"):
-        
-        match model_type:
-            case "EfficientNetV2":
-                model = models.EfficientNetV2(num_classes=1, pretrained=True, in_channels=4)
-            case "MiT":
-                model = models.MiT(num_classes=1, pretrained=True, in_channels=4)
-            case "ConvNext":
-                model = models.ConvNext(num_classes=1, pretrained=True, in_channels=4)
-            case _:
-                raise ValueError(f"Unknown model type: {model_type}")
-        return model
     
