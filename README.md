@@ -122,6 +122,6 @@ The application allows you to:
 *   Analyze the output mask and a performance overlay showing True/False Positives and Negatives.
 *   Adjust the detection confidence threshold.
 
-![Analyse de panache de méthane](app/assets/streamlit_1.png)
-![Résultat du modèle](app/assets/streamlit_2.png)
-![Résultat du modèle](app/assets/streamlit_3.png)
+<p align="center">
+  <img src="app/assets/presentation.gif" width="700" alt="Démonstration de STARCOP">
+</p>
