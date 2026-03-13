@@ -39,7 +39,7 @@ with st.sidebar:
     st.subheader("2. Configuration Modèle")
     selected_fold = st.selectbox("Sélectionner le modèle", ['EfficientNetV2', 'MiT'])
     
-    threshold = st.slider("Seuil de détection (Confidence)", 0.1, 0.9, 0.5, 0.05)
+    threshold = st.slider("Seuil de détection (Confidence)", 0.1, 0.99, 0.5, 0.05)
     
     st.divider()
     predict_btn = st.button("Lancer la détection", use_container_width=True, type="primary")
@@ -74,8 +74,9 @@ if predict_btn:
         with torch.no_grad():
             pred = model(input.unsqueeze(0))
         pred = torch.sigmoid(pred).cpu().numpy().squeeze()
+
         pred_binary = (pred > threshold).astype(np.uint8)
-        print(np.any(pred_binary > 0))
+
         gt = gt.cpu().numpy().squeeze()
 
     tab1, tab2 = st.tabs(["📊 Analyse Superposée", "🔍 Comparaison Côte-à-Côte"])

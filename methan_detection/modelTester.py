@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import random
 from matplotlib.colors import ListedColormap
 import matplotlib.patches as mpatches
-
+import segmentation_models_pytorch as smp
 
 class ModelTester:
     
@@ -59,12 +59,13 @@ class ModelTester:
 
         final_masks = [(p / self.backup_config['n_folds'] > 0.5).int() for p in accumulated_probs]
         gt_masks = self.get_all_ground_truths(test_loader)
+        gt_masks = gt_masks.int()
 
         preds_final = torch.cat(final_masks, dim=0).squeeze(1)
         
-        mean_dice_score = self.compute_final_dice_score(preds_final, gt_masks)
+        mean_iou_score = self.compute_final_iou_score(preds_final, gt_masks)
         
-        print(f"Final Mean Dice Score: {mean_dice_score:.4f}")
+        print(f"Final Mean IoU Score: {mean_iou_score:.4f}")
 
         self.visualize_methane_errors(preds_final, gt_masks, n_visualize)
 
@@ -93,23 +94,20 @@ class ModelTester:
         
         return torch.cat(all_gts, dim=0)
 
-    def compute_final_dice_score(self, preds, gts, smooth=1e-6):
+    def compute_final_iou_score(self, preds, gts):
         """
         preds: Tenseur binaire [N, H, W] ou [N, 1, H, W]
         gts: Tenseur binaire [N, H, W] ou [N, 1, H, W]
         """
 
-        preds = preds.float().view(preds.size(0), -1)
-        gts = gts.float().view(gts.size(0), -1)
+        #preds = preds.float().view(preds.size(0), -1)
+        #gts = gts.float().view(gts.size(0), -1)
 
-        intersection = (preds * gts).sum(dim=1)
-        total_sum = preds.sum(dim=1) + gts.sum(dim=1)
+        tp, fp, fn, tn = smp.metrics.get_stats(preds, gts, mode='binary', threshold=0.5)
 
-        dice_per_image = (2. * intersection + smooth) / (total_sum + smooth)
-
-        mean_dice = dice_per_image.mean().item()
+        iou_score = smp.metrics.iou_score(tp, fp, fn, tn, reduction="micro")
         
-        return mean_dice
+        return iou_score
     
 
     def visualize_methane_errors(self, preds, gts, n):
@@ -132,16 +130,16 @@ class ModelTester:
             
             error_map = np.zeros_like(p, dtype=int)
             
-            error_map[(p == 1) & (g == 0)] = 1  # False Positive (Rouge)
-            error_map[(p == 0) & (g == 1)] = 2  # False Negative (Jaune)
-            error_map[(p == 1) & (g == 1)] = 3  # True Positive (Vert)
+            error_map[(p == 1) & (g == 0)] = 1  # False Positive 
+            error_map[(p == 0) & (g == 1)] = 2  # False Negative 
+            error_map[(p == 1) & (g == 1)] = 3  # True Positive 
             
-            intersect = np.sum((p == 1) & (g == 1))
-            dice = (2. * intersect) / (np.sum(p) + np.sum(g) + 1e-6)
+
+            iou = self.compute_final_iou_score(preds[idx], gts[idx])
 
             # 5. Affichage
-            im = axes[i].imshow(error_map, cmap=cmap, interpolation='nearest')
-            axes[i].set_title(f"Sample {idx} | Dice: {dice:.3f}", fontsize=12, pad=10)
+            im = axes[i].imshow(error_map, cmap=cmap, interpolation='nearest', vmin=0, vmax=3)
+            axes[i].set_title(f"Sample {idx} | IoU: {iou:.3f}", fontsize=12, pad=10)
             axes[i].axis('off')
 
         # 6. Légende commune
