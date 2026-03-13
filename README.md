@@ -5,6 +5,11 @@ This project leverages computer vision and hyperspectral satellite imagery to au
 
 The core of the project is a U-Net-based segmentation model with an pre-trained backbone, trained to identify methane plume masks from 4-channel satellite images (RGB + a specialized `mag1c` filter). The repository includes a full pipeline for data handling, training, and evaluation, as well as an interactive Streamlit application for visual analysis of model predictions.
 
+<p align="center">
+  <img src="app/assets/presentation.gif" width="700" alt="Démonstration de STARCOP">
+</p>
+
+
 ## Key Features
 
 *   **Advanced Segmentation Model**: Utilizes a U-Net architecture with a pre-trained encoder for high-accuracy methane plume segmentation.
@@ -121,7 +126,3 @@ The application allows you to:
 *   Click "Lancer la détection" to run inference.
 *   Analyze the output mask and a performance overlay showing True/False Positives and Negatives.
 *   Adjust the detection confidence threshold.
-
-![Analyse de panache de méthane](app/assets/streamlit_1.png)
-![Résultat du modèle](app/assets/streamlit_2.png)
-![Résultat du modèle](app/assets/streamlit_3.png)
