@@ -1,13 +1,21 @@
 import streamlit as st
 import torch
 import segmentation_models_pytorch as smp
-from methan_detection.models import EfficientNetV2 # Importe ta classe de modèle
+from methan_detection.models import EfficientNetV2, MiT, ConvNext # Importe ta classe de modèle
 
 @st.cache_resource
-def load_methane_model(checkpoint_path, device="cpu"):
+def load_methane_model(name, checkpoint_path, device="cpu"):
     """Charge un modèle depuis un checkpoint et le garde en cache."""
     
-    model = EfficientNetV2(num_classes=1, pretrained=True, in_channels=4)
+    if name == "EfficientNetV2":
+        model = EfficientNetV2(num_classes=1, pretrained=True, in_channels=4)
+    elif name == "MiT":
+        model = MiT(num_classes=1, pretrained=True, in_channels=4)
+    elif name == "ConvNext":
+        model = ConvNext(num_classes=1, pretrained=True, in_channels=4)
+    else:
+        raise ValueError(f"Model name {name} is not supported.")
+
     model.load_state_dict(torch.load(checkpoint_path))
     model.to(device)
     model.eval()

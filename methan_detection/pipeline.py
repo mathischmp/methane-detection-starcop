@@ -25,11 +25,11 @@ class Pipeline:
 
 
     def run(self):
-        self.donwload_data_from_drive()
-        self.load_data()
+        #self.donwload_data_from_drive()
+        #self.load_data()
         df = self.load_csv()
         df = self.create_folds(df)
-        trainer = Trainer(model=self.model, df=df, n_xp=self.n_xp)
+        trainer = Trainer(model=self.model, df=df, num_xp=self.n_xp)
         trainer.run()
         return None
    

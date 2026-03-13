@@ -10,10 +10,10 @@ storage:
 
 
 training:
-  num_xp: 2
+  num_xp: 1
   n_folds: 5
   batch_size: 8
-  n_total_epochs: 20
+  n_total_epochs: 15
   n_epochs_before_unfreeze: 5
   warmup_epochs: 3
   freeze_lr: 1e-3
@@ -23,7 +23,7 @@ training:
   num_workers: 4
   device: "cuda"
   loss: "dice"  #or "cross_entropy" or "focal" or "combined"
-  model: "EfficientNetV2"
+  model: "MiT"
   method: "concat"
 
   

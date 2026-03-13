@@ -12,7 +12,7 @@ import math
 from tqdm.auto import tqdm
 import numpy as np
 from .methaneLogger import MethaneLogger
-
+from segmentation_models_pytorch.losses import DiceLoss, JaccardLoss, FocalLoss, SoftBCEWithLogitsLoss
 
 class Trainer:
     
@@ -35,7 +35,7 @@ class Trainer:
         os.makedirs(self.result_folder, exist_ok=True)
 
         if self.config['training']['loss'] == "dice":
-            self.criterion = dice_loss.MethaneDiceLoss()
+            self.criterion = DiceLoss(mode='binary')
         elif self.config['training']['loss'] == "combined":
             self.criterion = dice_loss.MethaneCombinedLoss()
         
@@ -112,7 +112,7 @@ class Trainer:
                 pred = self.model(inputs).squeeze(1)
                 loss = self.criterion(pred, gt)
                 total_loss += loss.item()
-                dice_score += self.dice_coef(gt, pred)
+                dice_score += self.dice_coef_torch(gt, pred)
         
         return total_loss / len(valid_loader), dice_score / len(valid_loader)
 

@@ -8,7 +8,6 @@ from data_utils import load_test_metadata, preprocess_for_inference, get_images_
 import os
 import torch
 
-model_path= os.path.join('results', 'results_EfficientNetV2', 'results_xp_1', 'models', 'best_EfficientNetV2_fold_0.pth')
 
 st.set_page_config(
     page_title="Methane Sentinel - StarCop",
@@ -38,7 +37,7 @@ with st.sidebar:
     rgb_sample, mag1c_sample = get_images_from_id_for_display(selected_id)
 
     st.subheader("2. Configuration Modèle")
-    selected_fold = st.selectbox("Sélectionner le modèle", ['EfficientNetV2'])
+    selected_fold = st.selectbox("Sélectionner le modèle", ['EfficientNetV2', 'MiT'])
     
     threshold = st.slider("Seuil de détection (Confidence)", 0.1, 0.9, 0.5, 0.05)
     
@@ -66,15 +65,17 @@ st.divider()
 # ---  PRÉDICTION ---
 if predict_btn:
     
+    model_path= os.path.join('results', f'results_{selected_fold}', 'results_xp_1', 'models', f'best_{selected_fold}_fold_0.pth')
+
     input, gt = get_images_from_id_for_inference(selected_id)
-    model = load_methane_model(model_path, device="cpu")
+    model = load_methane_model(selected_fold, model_path, device="cpu")
     
     with st.spinner("🧠 Le modèle analyse les données Sentinel-2..."):
         with torch.no_grad():
             pred = model(input.unsqueeze(0))
         pred = torch.sigmoid(pred).cpu().numpy().squeeze()
         pred_binary = (pred > threshold).astype(np.uint8)
-        print(np.any(pred > 0))
+        print(np.any(pred_binary > 0))
         gt = gt.cpu().numpy().squeeze()
 
     tab1, tab2 = st.tabs(["📊 Analyse Superposée", "🔍 Comparaison Côte-à-Côte"])
@@ -105,6 +106,6 @@ if predict_btn:
         with col_b:
             st.image(gt, caption="Ground Truth (Réalité)", use_container_width=True)
     with st.expander("ℹ️ Informations techniques sur le modèle"):
-        st.write(f"Modèle : EfficientNetV2 | Nombre de folds: 5 ")
+        st.write(f"Modèle : {selected_fold} | Nombre de folds: 5 ")
 else:
     st.info("Sélectionnez un événement et cliquez sur 'Lancer la détection' pour voir le résultat.")

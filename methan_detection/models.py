@@ -59,7 +59,7 @@ class EfficientNetV2(nn.Module):
 class MiT(nn.Module):
     def __init__(self, num_classes=1, pretrained=True, in_channels=4):
         super().__init__()
-        self.model = smp.Unet(
+        self.smp_model = smp.Unet(
             encoder_name='mit_b3',
             encoder_weights='imagenet' if pretrained else None,
             in_channels=in_channels,
@@ -67,6 +67,9 @@ class MiT(nn.Module):
         )
     def forward(self, x):
         return self.smp_model(x)
+    
+    def get_name(self):
+        return "MiT"
 
 class ConvNext(nn.Module):
     def __init__(self, num_classes=1, pretrained=True, in_channels=4):
@@ -79,3 +82,6 @@ class ConvNext(nn.Module):
         )
     def forward(self, x):
         return self.model(x)
+    
+    def get_name(self):
+        return "ConvNext"

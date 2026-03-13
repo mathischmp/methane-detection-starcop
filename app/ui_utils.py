@@ -8,6 +8,7 @@ def plot_overlay_analysis(rgb, pred, gt, alpha=0.5):
     pred, gt: masques binaires [H, W]
     """
     # 0: TN, 1: FP, 2: FN, 3: TP
+    print("CONTIENT DES 1:", np.any(pred > 0))
     error_map = np.zeros_like(pred, dtype=int)
     error_map[(pred == 1) & (gt == 0)] = 1  # Rouge
     error_map[(pred == 0) & (gt == 1)] = 2  # Jaune
@@ -17,7 +18,7 @@ def plot_overlay_analysis(rgb, pred, gt, alpha=0.5):
         (0, 0, 0, 0.0),    # TN : Totalement Transparent
         (1, 0, 0, alpha),  # FP : Rouge semi-transparent
         (1, 0.8, 0, alpha),# FN : Jaune semi-transparent
-        (0, 1, 0, alpha)   # TP : Vert semi-transparent
+        (0, 1, 0, alpha),  # TP : Vert semi-transparent
     ]
     cmap = ListedColormap(colors)
 
@@ -25,7 +26,7 @@ def plot_overlay_analysis(rgb, pred, gt, alpha=0.5):
     
     ax.imshow(rgb)
     
-    ax.imshow(error_map, cmap=cmap, interpolation='nearest')
+    ax.imshow(error_map, cmap=cmap, interpolation='nearest', vmin=0, vmax=3)
     
     ax.axis('off')
     return fig
