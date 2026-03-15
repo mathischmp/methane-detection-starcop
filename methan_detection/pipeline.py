@@ -26,8 +26,8 @@ class Pipeline:
 
     def run(self):
         #self.donwload_data_from_drive()
-        if self.config['training']['load_zip_data']:
-            self.load_data()
+        #if self.config['training']['load_zip_data']:
+            #self.load_data()
         df = self.load_csv()
         df = self.create_folds(df)
         trainer = Trainer(model=self.model, df=df, num_xp=self.n_xp)
