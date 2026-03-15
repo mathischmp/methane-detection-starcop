@@ -21,7 +21,6 @@ class Pipeline:
         self.config = load_config()
         self.training_type = training_type
         self.n_xp = self.config['training']['num_xp']
-        self.model = setup_model(model_type=self.config['training']['model'])
 
 
     def run(self):
@@ -30,7 +29,7 @@ class Pipeline:
             #self.load_data()
         df = self.load_csv()
         df = self.create_folds(df)
-        trainer = Trainer(model=self.model, df=df, num_xp=self.n_xp)
+        trainer = Trainer(df=df, num_xp=self.n_xp)
         trainer.run()
         return None
    

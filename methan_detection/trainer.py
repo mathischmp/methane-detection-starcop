@@ -14,13 +14,14 @@ import numpy as np
 from .methaneLogger import MethaneLogger
 from segmentation_models_pytorch.losses import DiceLoss, JaccardLoss, FocalLoss, SoftBCEWithLogitsLoss
 import segmentation_models_pytorch as smp
+from .utils import setup_model
 
 class Trainer:
     
-    def __init__(self, model, df, num_xp = 1):
+    def __init__(self, df, num_xp = 1):
         self.config = self.load_config()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model = model.to(self.device)
+        self.model = setup_model(model_type=self.config['training']['model'])
         self.data_transformer = visionDataTransformer.VisionDataTransformer()   
         self.df = df
         self.method = self.config['training']['method']
@@ -129,6 +130,7 @@ class Trainer:
 
 
     def validate_one_fold(self, df, n_fold : int): 
+        self.model = setup_model(model_type=self.config['training']['model'])
         best_validation_loss = float('inf')
         self.logger.set_fold(n_fold)
 
