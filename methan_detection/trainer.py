@@ -149,16 +149,22 @@ class Trainer:
             pin_memory=False)
         
         self.model.smp_model.train()
+        
+        decoder_lr = float(self.config['training']['unfreeze_lr'])
+        encoder_lr = decoder_lr * 0.1
+        
+
+        head_params = list(self.model.smp_model.decoder.parameters()) + list(self.model.smp_model.segmentation_head.parameters())
+        wd = float(self.config['training']['weight_decay'])
+        optimizer = optim.Adam([
+            {'params': self.model.smp_model.encoder.parameters(), 'lr': encoder_lr, 'weight_decay': wd}, 
+            {'params': head_params, 'lr': decoder_lr, 'weight_decay': wd}
+        ]
+        )
+        
         for param in self.model.smp_model.encoder.parameters():
             param.requires_grad = False
-        
-        wd = float(self.config['training']['weight_decay'])
 
-        optimizer = optim.Adam(
-            filter(lambda p: p.requires_grad, self.model.parameters()),
-            lr=float(self.config['training']['freeze_lr']),
-            weight_decay = wd
-        )
 
         scheduler = self.methan_scheduler(optimizer, int(self.config['training']['n_total_epochs']))
 
@@ -186,21 +192,6 @@ class Trainer:
 
         for param in self.model.smp_model.encoder.parameters():
             param.requires_grad = True
-        
-        decoder_lr = float(self.config['training']['unfreeze_lr'])
-        encoder_lr = decoder_lr * 0.1
-        
-
-        head_params = list(self.model.smp_model.decoder.parameters()) + list(self.model.smp_model.segmentation_head.parameters())
-
-        optimizer = optim.Adam([
-            {'params': self.model.smp_model.encoder.parameters(), 'lr': encoder_lr, 'weight_decay': wd}, 
-            {'params': head_params, 'lr': decoder_lr, 'weight_decay': wd}
-        ]
-        )
-
-        scheduler.optimizer = optimizer
-        scheduler.base_lrs = [group['lr'] for group in optimizer.param_groups]
 
         print(f'\n=== Fold {n_fold} | Phase 2: Encoder Unfrozen ===')
 
