@@ -200,6 +200,7 @@ class Trainer:
         )
 
         scheduler.optimizer = optimizer
+        scheduler.base_lrs = [group['lr'] for group in optimizer.param_groups]
 
         print(f'\n=== Fold {n_fold} | Phase 2: Encoder Unfrozen ===')
 
