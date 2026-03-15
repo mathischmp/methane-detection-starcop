@@ -13,6 +13,7 @@ from tqdm.auto import tqdm
 import numpy as np
 from .methaneLogger import MethaneLogger
 from segmentation_models_pytorch.losses import DiceLoss, JaccardLoss, FocalLoss, SoftBCEWithLogitsLoss
+import segmentation_models_pytorch as smp
 
 class Trainer:
     
@@ -59,6 +60,15 @@ class Trainer:
         
         return dice.item()
     
+    def compute_iou_score(self, pred, gt):
+        pred = (torch.sigmoid(pred) > 0.5).int()
+        gt = gt.int()
+        tp, fp, fn, tn = smp.metrics.get_stats(pred, gt, mode='binary', threshold=0.5)
+
+        iou_score = smp.metrics.iou_score(tp, fp, fn, tn, reduction="micro")
+        
+        return iou_score
+    
     def get_train_valid_from_fold(self, df, n_fold : int):
         assert n_fold <= self.config['training']['n_folds']
 
@@ -98,7 +108,7 @@ class Trainer:
     def validate_one_epoch(self, valid_loader):
         total_loss = 0
         self.model.smp_model.eval()
-        dice_score = 0
+        iou_score = 0
 
         with torch.no_grad():
             for rgb,mag1c,gt,qplume in valid_loader:
@@ -112,9 +122,9 @@ class Trainer:
                 pred = self.model(inputs).squeeze(1)
                 loss = self.criterion(pred, gt)
                 total_loss += loss.item()
-                dice_score += self.dice_coef_torch(gt, pred)
+                iou_score += self.compute_iou_score(gt, pred)
         
-        return total_loss / len(valid_loader), dice_score / len(valid_loader)
+        return total_loss / len(valid_loader), iou_score / len(valid_loader)
 
 
 
@@ -150,7 +160,7 @@ class Trainer:
             weight_decay = wd
         )
 
-        scheduler = self.methan_scheduler(optimizer, int(self.config['training']['n_epochs_before_unfreeze']))
+        scheduler = self.methan_scheduler(optimizer, int(self.config['training']['n_total_epochs']))
 
         print(f'\n=== Fold {n_fold} | Phase 1: Encoder Frozen ===')
 
@@ -159,7 +169,7 @@ class Trainer:
 
         for n in pbar:
             train_loss = self.train_one_epoch(train_loader, optimizer)
-            val_loss, dice_score = self.validate_one_epoch(valid_loader)
+            val_loss, iou_score = self.validate_one_epoch(valid_loader)
             scheduler.step()
             pbar.set_postfix({
                 "T-Loss": f"{train_loss:.4f}",
@@ -172,7 +182,7 @@ class Trainer:
                 best_validation_loss = val_loss
                 torch.save(self.model.state_dict(), model_dict_path)
             
-            self.logger.log_metrics(epoch=n, train_loss=train_loss, val_loss=val_loss, dice_score=dice_score)
+            self.logger.log_metrics(epoch=n, train_loss=train_loss, val_loss=val_loss, iou_score=iou_score)
 
         for param in self.model.smp_model.encoder.parameters():
             param.requires_grad = True
@@ -189,7 +199,7 @@ class Trainer:
         ]
         )
 
-        scheduler = self.methan_scheduler(optimizer, int(self.config['training']['n_epochs_before_unfreeze']))
+        scheduler.optimizer = optimizer
 
         print(f'\n=== Fold {n_fold} | Phase 2: Encoder Unfrozen ===')
 
@@ -211,7 +221,7 @@ class Trainer:
                 best_validation_loss = val_loss
                 torch.save(self.model.state_dict(), model_dict_path)
             
-            self.logger.log_metrics(epoch=n + self.config['training']['n_epochs_before_unfreeze'], train_loss=train_loss, val_loss=val_loss, dice_score=dice_score)
+            self.logger.log_metrics(epoch=n + self.config['training']['n_epochs_before_unfreeze'], train_loss=train_loss, val_loss=val_loss, iou_score=dice_score)
         
         self.logger.finish_fold()
         return None

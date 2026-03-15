@@ -7,6 +7,9 @@ from methan_detection.models import EfficientNetV2, MiT, ConvNext # Importe ta c
 def load_methane_model(name, checkpoint_path, device="cpu"):
     """Charge un modèle depuis un checkpoint et le garde en cache."""
     
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
+
     if name == "EfficientNetV2":
         model = EfficientNetV2(num_classes=1, pretrained=True, in_channels=4)
     elif name == "MiT":
@@ -16,7 +19,7 @@ def load_methane_model(name, checkpoint_path, device="cpu"):
     else:
         raise ValueError(f"Model name {name} is not supported.")
 
-    model.load_state_dict(torch.load(checkpoint_path))
+    model.load_state_dict(torch.load(checkpoint_path, map_location = device))
     model.to(device)
     model.eval()
     return model

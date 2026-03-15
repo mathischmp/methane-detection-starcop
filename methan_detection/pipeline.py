@@ -26,7 +26,8 @@ class Pipeline:
 
     def run(self):
         #self.donwload_data_from_drive()
-        #self.load_data()
+        if self.config['training']['load_zip_data']:
+            self.load_data()
         df = self.load_csv()
         df = self.create_folds(df)
         trainer = Trainer(model=self.model, df=df, num_xp=self.n_xp)
@@ -57,7 +58,7 @@ class Pipeline:
             with zipfile.ZipFile(zip_file, "r") as zip_ref:
                 zip_ref.extractall(os.path.join('..', dataset_folder))
                 zip_ref.close()
-            os.remove(zip_file)
+            #os.remove(zip_file)
         else:
             raise FileNotFoundError(f"Zip file not found at {zip_file}")
         

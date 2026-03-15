@@ -29,16 +29,16 @@ class MethaneLogger:
         os.makedirs(os.path.join(self.fold_dir, "samples"), exist_ok=True)
         self.fold_metrics = []
 
-    def log_metrics(self, epoch, train_loss, val_loss, dice_score):
+    def log_metrics(self, epoch, train_loss, val_loss, iou_score):
         """Enregistre les métriques d'une époque."""
         metrics = {
             "epoch": epoch,
             "train_loss": train_loss,
             "val_loss": val_loss,
-            "dice_score": dice_score
+            "iou_score": iou_score
         }
         self.fold_metrics.append(metrics)
-        #print(f"[Fold {self.current_fold} | Epoch {epoch}] Loss: {val_loss:.4f} | Dice Score: {dice_score:.4f}")
+        #print(f"[Fold {self.current_fold} | Epoch {epoch}] Loss: {val_loss:.4f} | Dice Score: {iou_score:.4f}")
 
     def save_checkpoint(self, model, is_best=False):
         """Sauvegarde les poids du modèle."""
@@ -77,14 +77,14 @@ class MethaneLogger:
         plt.close()
 
         # On garde la meilleure métrique du pli pour le résumé global
-        best_dice_score = df['dice_score'].max()
-        self.history.append({"fold": self.current_fold, "best_dice_score": best_dice_score})
+        best_iou_score = df['iou_score'].max()
+        self.history.append({"fold": self.current_fold, "best_iou_score": best_iou_score})
 
     def finalize_global_report(self):
         """Calcule la performance moyenne sur tous les plis."""
         df_global = pd.DataFrame(self.history)
-        mean_iou = df_global['best_dice_score'].mean()
-        std_iou = df_global['best_dice_score'].std()
+        mean_iou = df_global['best_iou_score'].mean()
+        std_iou = df_global['best_iou_score'].std()
         
         summary = f"CV Performance: {mean_iou:.4f} (+/- {std_iou:.4f})"
         with open(os.path.join(self.run_dir, "global_summary.txt"), "w") as f:
