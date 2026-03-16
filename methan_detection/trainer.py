@@ -131,6 +131,7 @@ class Trainer:
 
     def validate_one_fold(self, df, n_fold : int): 
         self.model = setup_model(model_type=self.config['training']['model'])
+        self.model.to(self.device)
         best_validation_loss = float('inf')
         self.logger.set_fold(n_fold)
 
