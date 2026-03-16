@@ -81,7 +81,7 @@ class ModelTester:
 
         model = setup_model(model_type=self.model_name)
         path = os.path.join(self.model_folder, f'best_{self.model_name}_fold_{n_fold}.pth')
-        model.load_state_dict(torch.load(path, weights_only=True))
+        model.load_state_dict(torch.load(path, weights_only=True, map_location=self.device))
         model.to(self.device)
         model.eval()
         

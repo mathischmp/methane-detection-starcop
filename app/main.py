@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from ui_utils import plot_overlay_analysis
 from model_loader import load_methane_model, get_prediction
-from data_utils import load_test_metadata, preprocess_for_inference, get_images_from_id_for_display, get_images_from_id_for_inference, get_rgb_stacked
+from data_utils import load_test_metadata, preprocess_for_inference, get_images_from_id_for_display, get_images_from_id_for_inference, get_rgb_stacked, count_subdirectories
 import os
 import torch
 
@@ -37,8 +37,13 @@ with st.sidebar:
     rgb_sample, mag1c_sample = get_images_from_id_for_display(selected_id)
 
     st.subheader("2. Configuration Modèle")
-    selected_fold = st.selectbox("Sélectionner le modèle", ['EfficientNetV2', 'MiT'])
+    selected_modele_name = st.selectbox("Sélectionner le modèle", ['EfficientNetV2', 'MiT'])
     
+    path_to_experiments = os.path.join('results', f'results_{selected_modele_name}')
+    num_experiments = count_subdirectories(path_to_experiments)
+
+    selected_experiment = st.selectbox("Sélectionner la version du modèle", [f"xp_{i}" for i in range(1, int(num_experiments) + 1)])
+
     threshold = st.slider("Seuil de détection (Confidence)", 0.1, 0.99, 0.5, 0.05)
     
     st.divider()
@@ -65,17 +70,41 @@ st.divider()
 # ---  PRÉDICTION ---
 if predict_btn:
     
-    model_path= os.path.join('results', f'results_{selected_fold}', 'results_xp_1', 'models', f'best_{selected_fold}_fold_0.pth')
+    # --- Configuration ---
+    num_folds = 5
+    accumulated_preds = None
 
-    input, gt = get_images_from_id_for_inference(selected_id)
-    model = load_methane_model(selected_fold, model_path, device="cpu")
-    
-    with st.spinner("🧠 Le modèle analyse les données Sentinel-2..."):
+    input_img, gt = get_images_from_id_for_inference(selected_id)
+    input_tensor = input_img.unsqueeze(0).to("cpu") 
+
+    with st.spinner(f"🧠 Analyse en cours par l'ensemble des {num_folds} modèles..."):
         with torch.no_grad():
-            pred = model(input.unsqueeze(0))
-        pred = torch.sigmoid(pred).cpu().numpy().squeeze()
+            for fold in range(num_folds):
+                current_model_path = os.path.join(
+                    'results', 
+                    f'results_{selected_modele_name}', 
+                    f'results_{selected_experiment}', 
+                    'models', 
+                    f'best_{selected_modele_name}_fold_{fold}.pth'
+                )
 
-        pred_binary = (pred > threshold).astype(np.uint8)
+                model = load_methane_model(selected_modele_name, current_model_path, device="cpu")
+                model.eval()
+                
+                output = model(input_tensor)
+                prob = torch.sigmoid(output).cpu().numpy().squeeze()
+                
+
+                if accumulated_preds is None:
+                    accumulated_preds = prob
+                else:
+                    accumulated_preds += prob
+                
+                del model 
+        
+        avg_pred = accumulated_preds / num_folds
+
+        pred_binary = (avg_pred > threshold).astype(np.uint8)
 
         gt = gt.cpu().numpy().squeeze()
 
@@ -107,6 +136,6 @@ if predict_btn:
         with col_b:
             st.image(gt, caption="Ground Truth (Réalité)", use_container_width=True)
     with st.expander("ℹ️ Informations techniques sur le modèle"):
-        st.write(f"Modèle : {selected_fold} | Nombre de folds: 5 ")
+        st.write(f"Modèle : {selected_modele_name} | Nombre de folds: 5 ")
 else:
     st.info("Sélectionnez un événement et cliquez sur 'Lancer la détection' pour voir le résultat.")

@@ -5,6 +5,8 @@ import torch
 import os
 import rasterio
 from methan_detection import visionDataTransformer
+from pathlib import Path
+
 @st.cache_data
 def load_test_metadata():
     test_data = os.path.join('data', 'STARCOP_test', 'test.csv')
@@ -84,3 +86,15 @@ def get_rgb_stacked(selected_id):
     r, g, b, _, _ = get_rasterio_image(selected_id)
     rgb = np.stack([r, g, b], axis=-1).astype(np.float32)
     return rgb
+
+def count_subdirectories(directory_path):
+    path = Path(directory_path)
+    
+    if not path.exists():
+        return "Erreur : Le chemin n'existe pas."
+    if not path.is_dir():
+        return "Erreur : Le chemin fourni n'est pas un dossier."
+
+    subdirs = [d for d in path.iterdir() if d.is_dir()]
+    
+    return len(subdirs)
