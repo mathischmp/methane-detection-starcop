@@ -68,7 +68,7 @@ class Trainer:
 
         iou_score = smp.metrics.iou_score(tp, fp, fn, tn, reduction="micro")
         
-        return iou_score
+        return iou_score.cpu().item()
     
     def get_train_valid_from_fold(self, df, n_fold : int):
         assert n_fold <= self.config['training']['n_folds']
@@ -202,7 +202,7 @@ class Trainer:
 
         for n in pbar:
             train_loss = self.train_one_epoch(train_loader, optimizer)
-            val_loss, dice_score = self.validate_one_epoch(valid_loader)
+            val_loss, iou_score = self.validate_one_epoch(valid_loader)
             scheduler.step()
             pbar.set_postfix({
                 "T-Loss": f"{train_loss:.4f}",
@@ -215,7 +215,7 @@ class Trainer:
                 best_validation_loss = val_loss
                 torch.save(self.model.state_dict(), model_dict_path)
             
-            self.logger.log_metrics(epoch=n + self.config['training']['n_epochs_before_unfreeze'], train_loss=train_loss, val_loss=val_loss, iou_score=dice_score)
+            self.logger.log_metrics(epoch=n + self.config['training']['n_epochs_before_unfreeze'], train_loss=train_loss, val_loss=val_loss, iou_score=iou_score)
         
         self.logger.finish_fold()
         return None

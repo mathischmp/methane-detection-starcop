@@ -84,7 +84,7 @@ class MethaneLogger:
         """Calcule la performance moyenne sur tous les plis."""
         df_global = pd.DataFrame(self.history)
         mean_iou = df_global['best_iou_score'].mean()
-        std_iou = df_global['best_iou_score'].std()
+        std_iou = df_global['best_iou_score'].dropna().std()
         
         summary = f"CV Performance: {mean_iou:.4f} (+/- {std_iou:.4f})"
         with open(os.path.join(self.run_dir, "global_summary.txt"), "w") as f:
