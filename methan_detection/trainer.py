@@ -146,8 +146,7 @@ class Trainer:
             pin_memory=False)
         
         valid_loader = DataLoader(
-            valid_dataset, batch_size=self.
-            config['training']['batch_size'], 
+            valid_dataset, batch_size=self.config['training']['batch_size'], 
             shuffle=False, num_workers=self.config['training']['num_workers'],
             pin_memory=False)
         
