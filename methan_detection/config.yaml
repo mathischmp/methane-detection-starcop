@@ -10,7 +10,7 @@ storage:
 
 
 training:
-  num_xp: 2
+  num_xp: 3
   n_folds: 5
   batch_size: 8
   n_total_epochs: 15

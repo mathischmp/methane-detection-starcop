@@ -73,16 +73,27 @@ class Pipeline:
 
     def create_folds(self, df: pd.DataFrame):
         n_folds = self.config['training']['n_folds']
-        df['fold'] = -1
-        num_bins = min(10, int(np.floor(1 + np.log2(len(df)))))
-        print(f"Stratifying qplume into {num_bins} bins")
+        df = df.copy()
+        
+        seuil_95 = df['qplume'].quantile(0.95)
+        df = df[df['qplume'] <= seuil_95].copy()
+        df = df.reset_index(drop=True)
+        
+        is_positive = df['qplume'] > 0
+        
+        num_bins =int(np.floor(1 + np.log2(len(is_positive))))
+        print(f"Using {num_bins} bins based on Sturges' formula")
 
-        df['total_bin'] = pd.cut(
-            df['qplume'], 
-            bins=num_bins, 
-            labels=False,
-            duplicates='drop'  # Remove duplicate edges
-)       
+        df['total_bin'] = 0
+
+        if is_positive.any():
+            df.loc[is_positive, 'total_bin'] = pd.cut(
+                df.loc[is_positive, 'qplume'], 
+                bins=num_bins, 
+                labels=False, 
+                duplicates='drop'
+            ) + 1
+
         df['date'] = pd.to_datetime(df['date'])
         df["date"] = df["date"].dt.day
         
@@ -90,6 +101,7 @@ class Pipeline:
         Y = df['total_bin']
         groups = df['date']
         
+        df['fold'] = -1
         skf = StratifiedGroupKFold(n_splits=n_folds, shuffle=True, random_state=42)
         for fold, (train_idx, val_idx) in enumerate(skf.split(X, Y, groups)):
             df.loc[val_idx, 'fold'] = fold
