@@ -3,15 +3,15 @@ import os
 import zipfile
 import yaml
 
-def setup_model(model_type="EfficientNetV2"):
+def setup_model(model_type="EfficientNetV2", in_channels =4):
     
     match model_type:
         case "EfficientNetV2":
-            model = models.EfficientNetV2(num_classes=1, pretrained=True, in_channels=4)
+            model = models.EfficientNetV2(num_classes=1, pretrained=True, in_channels=in_channels)
         case "MiT":
-            model = models.MiT(num_classes=1, pretrained=True, in_channels=4)
+            model = models.MiT(num_classes=1, pretrained=True, in_channels=in_channels)
         case "ConvNext":
-            model = models.ConvNext(num_classes=1, pretrained=True, in_channels=4)
+            model = models.ConvNext(num_classes=1, pretrained=True, in_channels=in_channels)
         case _:
             raise ValueError(f"Unknown model type: {model_type}")
     return model

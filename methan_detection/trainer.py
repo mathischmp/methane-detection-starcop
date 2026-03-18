@@ -20,8 +20,11 @@ class Trainer:
     
     def __init__(self, df, num_xp = 1):
         self.config = self.load_config()
+        self.n_swir = self.config['training']['n_swir']
+
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model = setup_model(model_type=self.config['training']['model'])
+        self.model = setup_model(model_type=self.config['training']['model'], in_channels= 4 + self.n_swir)
+        
         self.data_transformer = visionDataTransformer.VisionDataTransformer()   
         self.df = df
         self.method = self.config['training']['method']
@@ -84,12 +87,16 @@ class Trainer:
         optimizer.zero_grad()
         self.model.smp_model.train()
 
-        for rgb,mag1c,gt,qplume in train_loader:
+        for rgb,mag1c, swir, gt, qplume in train_loader:
 
             match self.method:
                 case "concat": 
                     if mag1c.dim() == 3: 
                          mag1c = mag1c.unsqueeze(1)
+                    
+                    if self.n_swir > 0:
+                        inputs = torch.cat([rgb, swir, mag1c], dim=1).to(self.device)
+
                     inputs = torch.cat([rgb, mag1c], dim=1).to(self.device)
             
             gt = gt.to(self.device)
@@ -112,12 +119,15 @@ class Trainer:
         iou_score = 0
 
         with torch.no_grad():
-            for rgb,mag1c,gt,qplume in valid_loader:
+            for rgb,mag1c,swir,gt,qplume in valid_loader:
                 match self.method:
                     case "concat": 
                         if mag1c.dim() == 3: 
                             mag1c = mag1c.unsqueeze(1)
+                        if self.n_swir > 0:
+                            inputs = torch.cat([rgb, swir, mag1c], dim=1).to(self.device)
                         inputs = torch.cat([rgb, mag1c], dim=1).to(self.device)
+                
                 gt = gt.to(self.device)
 
                 pred = self.model(inputs).squeeze(1)

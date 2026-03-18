@@ -19,23 +19,30 @@ class Dataset:
     def __getitem__(self, idx):
         event_id = self.labels['id'].values[idx]
         qplume = self.labels['qplume'].values[idx]
-        rgb,mag1c,gt = self.image_preprocessing(event_id)
+        rgb,mag1c, swir, gt = self.image_preprocessing(event_id)
 
         if self.transform:
-            rgb, mag1c, gt = self.visionAugmentation.transform(image=rgb, mag1c=mag1c, mask=gt)
+            rgb, mag1c, swir, gt = self.visionAugmentation.transform(image=rgb, mag1c=mag1c, swir = swir, mask=gt)
         
         else:
-            rgb, mag1c, gt = self.visionAugmentation.transform_for_validation(image=rgb, mag1c=mag1c, mask=gt)
-        return rgb,mag1c,gt,qplume
+            rgb, mag1c, swir, gt = self.visionAugmentation.transform_for_validation(image=rgb, mag1c=mag1c, swir = swir, mask=gt)
+        
+        if swir is None:
+            swir = torch.zeros((1, rgb.shape[1], rgb.shape[2]), dtype=torch.float32)
+
+        return rgb,mag1c,swir,gt,qplume
     
 
     def image_preprocessing(self, event_id): 
+
         if self.test:
             folder = os.path.join('..', self.config['storage']['local_raw_path'], 'STARCOP_test')
         else:
             folder = os.path.join('..', self.config['storage']['local_raw_path'], f'STARCOP_train_{self.training_type}')
         size_read = 300
         
+        n_swir = self.config['training']['n_swir']
+
         ft = os.path.join(folder, event_id)
         aviris_r = os.path.join(ft, "TOA_AVIRIS_640nm.tif")
         aviris_g = os.path.join(ft, "TOA_AVIRIS_550nm.tif")
@@ -65,9 +72,18 @@ class Dataset:
         with rasterio.open(aviris_b) as src:
             b = src.read(1, out_shape=out_shape)
 
-
+        if n_swir > 0:
+            swir_list = []
+            for i in range(n_swir):
+                swir_path = os.path.join(ft, f'TOA_WV3_SWIR{i+1}.tif')
+                with rasterio.open(swir_path) as src:
+                    swir_list.append(src.read(1, out_shape = out_shape))
+            swir = np.stack(swir_list, axis = -1).astype(np.float32)
+        else:
+            swir = None
+        
         rgb = np.stack([r, g, b], axis=-1).astype(np.float32)
         mag1c = np.asarray(mag1c).astype(np.float32)
         gt = np.asarray(gt).astype(np.float32)
         
-        return rgb,mag1c,gt
+        return rgb,mag1c, swir, gt
