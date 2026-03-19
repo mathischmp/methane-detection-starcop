@@ -7,7 +7,7 @@ from model_loader import load_methane_model, get_prediction
 from data_utils import load_test_metadata, preprocess_for_inference, get_images_from_id_for_display, get_images_from_id_for_inference, get_rgb_stacked, count_subdirectories
 import os
 import torch
-
+import segmentation_models_pytorch as smp
 
 st.set_page_config(
     page_title="Methane Sentinel - StarCop",
@@ -106,12 +106,17 @@ if predict_btn:
 
         pred_binary = (avg_pred > threshold).astype(np.uint8)
 
+        tp, fp, fn, tn = smp.metrics.get_stats(torch.tensor(pred_binary).int(), gt.int(), mode='binary', threshold=0.5)
+
+        iou_score = smp.metrics.iou_score(tp, fp, fn, tn, reduction="micro")
+
         gt = gt.cpu().numpy().squeeze()
+
 
     tab1, tab2 = st.tabs(["📊 Analyse Superposée", "🔍 Comparaison Côte-à-Côte"])
 
     with tab1:
-        st.subheader("Superposition des performances sur le terrain")
+        st.subheader(f"Superposition des performances sur le terrain, IOU SCORE: {iou_score}")
         
         empty_l, col_img, empty_r = st.columns([1, 2, 1])
 

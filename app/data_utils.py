@@ -75,7 +75,7 @@ def get_images_from_id_for_inference(selected_id):
     mag1c = np.asarray(mag1c).astype(np.float32)
     gt = np.asarray(gt).astype(np.float32)
     
-    rgb, mag1c, gt = vtransformer.transform_for_validation(rgb, mag1c, gt)
+    rgb, mag1c, swir, gt = vtransformer.transform_for_validation(image = rgb, mag1c = mag1c, mask = gt)
     input = torch.cat([rgb, mag1c], dim=0)
 
     print(f"Input shape for inference: {input.shape}, GT shape: {gt.shape}")

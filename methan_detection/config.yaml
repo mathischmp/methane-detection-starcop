@@ -20,11 +20,11 @@ training:
   unfreeze_lr: 5e-3
   weight_decay: 1e-5
   img_size: 512
-  num_workers: 4
+  num_workers: 2
   device: "cuda"
   loss: "dice"  #or "cross_entropy" or "focal" or "combined"
   model: "MiT"  #or "MiT"
   method: "concat"
-  n_swir: 0 #max 8
+  n_swir: 8 #max 8
   load_zip_data: True
   
