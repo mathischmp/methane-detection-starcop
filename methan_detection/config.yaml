@@ -25,6 +25,6 @@ training:
   loss: "dice"  #or "cross_entropy" or "focal" or "combined"
   model: "MiT"  #or "MiT"
   method: "concat"
-  n_swir: 8 #max 8
+  n_swir: 0 #max 8
   load_zip_data: True
   
