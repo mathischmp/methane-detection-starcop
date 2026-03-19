@@ -134,7 +134,7 @@ class Trainer:
                 pred = self.model(inputs).squeeze(1)
                 loss = self.criterion(pred, gt)
                 total_loss += loss.item()
-                iou_score += self.compute_iou_score(gt, pred)
+                iou_score += self.compute_iou_score(pred, gt)
         
         return total_loss / len(valid_loader), iou_score / len(valid_loader)
 
