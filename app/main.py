@@ -8,6 +8,7 @@ from data_utils import load_test_metadata, preprocess_for_inference, get_images_
 import os
 import torch
 import segmentation_models_pytorch as smp
+import json
 
 st.set_page_config(
     page_title="Methane Sentinel - StarCop",
@@ -34,7 +35,6 @@ with st.sidebar:
     test_ids = df['id'].tolist()
     selected_id = st.selectbox("Choisir une image de test", test_ids)
     
-    rgb_sample, mag1c_sample = get_images_from_id_for_display(selected_id)
 
     st.subheader("2. Configuration Modèle")
     selected_modele_name = st.selectbox("Sélectionner le modèle", ['EfficientNetV2', 'MiT'])
@@ -45,7 +45,13 @@ with st.sidebar:
     selected_experiment = st.selectbox("Sélectionner la version du modèle", [f"xp_{i}" for i in range(1, int(num_experiments) + 1)])
 
     threshold = st.slider("Seuil de détection (Confidence)", 0.1, 0.99, 0.5, 0.05)
-    
+
+    backup_config_path = os.path.join(path_to_experiments, f'results_{selected_experiment}', 'logs', 'config_backup.json')
+    with open(backup_config_path, 'r') as f:
+        backup_config = json.load(f) 
+
+    rgb_sample, mag1c_sample = get_images_from_id_for_display(selected_id, n_swir = int(backup_config['n_swir']))
+
     st.divider()
     predict_btn = st.button("Lancer la détection", use_container_width=True, type="primary")
 
@@ -74,7 +80,7 @@ if predict_btn:
     num_folds = 5
     accumulated_preds = None
 
-    input_img, gt = get_images_from_id_for_inference(selected_id)
+    input_img, gt = get_images_from_id_for_inference(selected_id, n_swir = int(backup_config['n_swir'] ))
     input_tensor = input_img.unsqueeze(0).to("cpu") 
 
     with st.spinner(f"🧠 Analyse en cours par l'ensemble des {num_folds} modèles..."):
@@ -88,7 +94,7 @@ if predict_btn:
                     f'best_{selected_modele_name}_fold_{fold}.pth'
                 )
 
-                model = load_methane_model(selected_modele_name, current_model_path, device="cpu")
+                model = load_methane_model(selected_modele_name, current_model_path, in_channels = backup_config['n_swir'] + 4, device="cpu")
                 model.eval()
                 
                 output = model(input_tensor)

@@ -4,18 +4,18 @@ import segmentation_models_pytorch as smp
 from methan_detection.models import EfficientNetV2, MiT, ConvNext # Importe ta classe de modèle
 
 @st.cache_resource
-def load_methane_model(name, checkpoint_path, device="cpu"):
+def load_methane_model(name, checkpoint_path, in_channels, device="cpu"):
     """Charge un modèle depuis un checkpoint et le garde en cache."""
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
 
     if name == "EfficientNetV2":
-        model = EfficientNetV2(num_classes=1, pretrained=True, in_channels=4)
+        model = EfficientNetV2(num_classes=1, pretrained=True, in_channels=in_channels)
     elif name == "MiT":
-        model = MiT(num_classes=1, pretrained=True, in_channels=4)
+        model = MiT(num_classes=1, pretrained=True, in_channels=in_channels)
     elif name == "ConvNext":
-        model = ConvNext(num_classes=1, pretrained=True, in_channels=4)
+        model = ConvNext(num_classes=1, pretrained=True, in_channels=in_channels)
     else:
         raise ValueError(f"Model name {name} is not supported.")
 

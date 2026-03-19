@@ -21,7 +21,7 @@ def preprocess_for_inference(rgb, mag1c):
     tensor = torch.from_numpy(combined).permute(2, 0, 1).unsqueeze(0)
     return tensor
 
-def get_rasterio_image(selected_id):
+def get_rasterio_image(selected_id, n_swir):
     ft = os.path.join('data', 'STARCOP_test', selected_id)
 
     aviris_r = os.path.join(ft, "TOA_AVIRIS_640nm.tif")
@@ -51,13 +51,24 @@ def get_rasterio_image(selected_id):
     with rasterio.open(aviris_b) as src:
         b = src.read(1, out_shape=out_shape)
 
-    return r,g,b, mag1c, gt
+
+    if n_swir > 0:
+        swir_list = []
+        for i in range(n_swir):
+            swir_path = os.path.join(ft, f'TOA_WV3_SWIR{i+1}.tif')
+            with rasterio.open(swir_path) as src:
+                swir_list.append(src.read(1, out_shape = out_shape))
+        swir = np.stack(swir_list, axis = -1).astype(np.float32)
+    else:
+        swir = None
+
+    return r,g,b, swir, mag1c, gt
 
 
-def get_images_from_id_for_display(selected_id):
+def get_images_from_id_for_display(selected_id, n_swir):
     """Charge les images RGB et MAG1C à partir de l'ID sélectionné."""
     
-    r, g, b, mag1c, gt = get_rasterio_image(selected_id)
+    r, g, b, swir, mag1c, gt = get_rasterio_image(selected_id, n_swir)
     rgb = np.asarray([r,g,b])
     rgb = np.clip(rgb/60., 0, 1) # Limite les valeurs extrêmes
     rgb = np.transpose(np.asanyarray(rgb),(1,2,0)) # [H, W, 3]
@@ -66,17 +77,21 @@ def get_images_from_id_for_display(selected_id):
     
     return rgb, mag1c_display
 
-def get_images_from_id_for_inference(selected_id):
+def get_images_from_id_for_inference(selected_id, n_swir):
 
-    r, g, b, mag1c, gt = get_rasterio_image(selected_id)
+    r, g, b, swir, mag1c, gt = get_rasterio_image(selected_id, n_swir)
     vtransformer = visionDataTransformer.VisionDataTransformer()
 
     rgb = np.stack([r, g, b], axis=-1).astype(np.float32)
     mag1c = np.asarray(mag1c).astype(np.float32)
     gt = np.asarray(gt).astype(np.float32)
     
-    rgb, mag1c, swir, gt = vtransformer.transform_for_validation(image = rgb, mag1c = mag1c, mask = gt)
-    input = torch.cat([rgb, mag1c], dim=0)
+    rgb, mag1c, swir, gt = vtransformer.transform_for_validation(image = rgb, mag1c = mag1c, swir = swir, mask = gt)
+    
+    if n_swir > 0:
+        input = torch.cat([rgb, swir, mag1c], dim=0)
+    else:
+        input = torch.cat([rgb, mag1c], dim=0)
 
     print(f"Input shape for inference: {input.shape}, GT shape: {gt.shape}")
 
