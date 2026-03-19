@@ -96,8 +96,8 @@ class Trainer:
                     
                     if self.n_swir > 0:
                         inputs = torch.cat([rgb, swir, mag1c], dim=1).to(self.device)
-
-                    inputs = torch.cat([rgb, mag1c], dim=1).to(self.device)
+                    else:
+                        inputs = torch.cat([rgb, mag1c], dim=1).to(self.device)
             
             gt = gt.to(self.device)
 
@@ -126,7 +126,8 @@ class Trainer:
                             mag1c = mag1c.unsqueeze(1)
                         if self.n_swir > 0:
                             inputs = torch.cat([rgb, swir, mag1c], dim=1).to(self.device)
-                        inputs = torch.cat([rgb, mag1c], dim=1).to(self.device)
+                        else:
+                            inputs = torch.cat([rgb, mag1c], dim=1).to(self.device)
                 
                 gt = gt.to(self.device)
 
