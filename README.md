@@ -3,7 +3,7 @@
 
 This project leverages computer vision and hyperspectral satellite imagery to automate the detection of methane plumes. By processing raw spectral data from the STARCOP dataset, it transforms complex information into actionable insights for climate monitoring and environmental protection.
 
-The core of the project is a U-Net-based segmentation model with an pre-trained backbone, trained to identify methane plume masks from 4-channel satellite images (RGB + a specialized `mag1c` filter). The repository includes a full pipeline for data handling, training, and evaluation, as well as an interactive Streamlit application for visual analysis of model predictions.
+The core of the project is a U-Net-based segmentation model with a pre-trained backbone, trained to identify methane plume masks from multi-channel satellite images (RGB, specialized `mag1c` filter, and Short-Wave Infrared (SWIR) bands). The repository includes a full pipeline for data handling, training, and evaluation, as well as an interactive Streamlit application for visual analysis of model predictions.
 
 <p align="center">
   <img src="app/assets/presentation.gif" width="700" alt="Démonstration de STARCOP">
@@ -14,7 +14,7 @@ The core of the project is a U-Net-based segmentation model with an pre-trained 
 
 *   **Advanced Segmentation Model**: Utilizes a U-Net architecture with a pre-trained encoder for high-accuracy methane plume segmentation.
 *   **End-to-End MLOps Pipeline**: A complete workflow from data downloading and preprocessing to stratified cross-validated training and model evaluation.
-*   **Multi-Channel Data Fusion**: Combines visible spectrum RGB data with a `mag1c` methane-sensitive band to improve detection accuracy.
+*   **Multi-Channel Data Fusion**: Combines visible spectrum RGB data with a methane-sensitive `mag1c` filter and Short-Wave Infrared (SWIR) bands to improve detection accuracy.
 *   **Interactive Analytics Dashboard**: A Streamlit application to run inference on test data, adjust detection thresholds, and visualize model performance with color-coded overlays (True Positives, False Positives, False Negatives).
 *   **Experiment Management**: Features a custom logger to track metrics, save model checkpoints, and generate performance reports for each cross-validation fold.
 *   **Data Augmentation**: Employs `albumentations` for robust data augmentation, enhancing model generalization.
@@ -39,7 +39,7 @@ The core of the project is a U-Net-based segmentation model with an pre-trained 
 ├── methan_detection/     # Core Python package for the project
 │   ├── pipeline.py       # End-to-end pipeline for data download, processing, and training
 │   ├── trainer.py        # Handles the model training and validation loop logic
-│   ├── models.py         # Defines segmentation models (U-Net, EfficientNetV2)
+│   ├── models.py         # Defines segmentation models (EfficientNetV2, MiT, ConvNext)
 │   ├── dataset.py        # PyTorch Dataset class for data loading
 │   ├── config.yaml       # Configuration file for all training parameters
 │   ├── dice_loss.py      # Custom loss functions for segmentation
@@ -123,6 +123,6 @@ The Streamlit application provides a user-friendly interface to test the model o
 The application allows you to:
 *   Select a test image by its ID.
 *   View the RGB satellite image and the `mag1c` filter input.
-*   Click "Lancer la détection" to run inference.
+*   Click "Lancer la détection" to run inference using the multi-channel model (RGB, mag1c, SWIR).
 *   Analyze the output mask and a performance overlay showing True/False Positives and Negatives.
 *   Adjust the detection confidence threshold.
