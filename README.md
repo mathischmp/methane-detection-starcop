@@ -19,6 +19,25 @@ The core of the project is a U-Net-based segmentation model with a pre-trained b
 *   **Experiment Management**: Features a custom logger to track metrics, save model checkpoints, and generate performance reports for each cross-validation fold.
 *   **Data Augmentation**: Employs `albumentations` for robust data augmentation, enhancing model generalization.
 
+### Training Strategy
+
+This project follows a robust training strategy to improve generalization and ensure fair evaluation:
+
+* **Cross-validation (Stratified Group K-Fold)**: Splits are created using `StratifiedGroupKFold` on binned `qplume` values while grouping by acquisition day to avoid temporal leakage between folds.
+* **Outlier handling**: The top 5% of `qplume` values are removed before splitting to avoid overfitting to extreme plume cases.
+* **Data augmentation**: Training uses `albumentations` to apply random rotations and flips, plus normalization, on multi-channel inputs (RGB + `mag1c` + SWIR).
+* **Multi-channel fusion**: Input tensors are built by concatenating RGB, `mag1c`, and SWIR bands into a single 12-channel tensor.
+* **Two-phase fine-tuning**:
+  * Phase 1: Freeze the encoder and train the decoder/head.
+  * Phase 2: Unfreeze the encoder for full fine-tuning.
+* **Optimizer & scheduler**:
+  * Adam optimizer with separate learning rates for encoder and decoder.
+  * Cosine decay learning rate schedule with a linear warmup.
+* **Loss & metrics**:
+  * Dice loss (or combined Dice + BCE) is used for training.
+  * Validation is tracked via IoU (Jaccard) and the best validation loss is used for checkpointing.
+
+
 ## Technology Stack
 
 *   **ML/DL**: PyTorch, Segmentation Models Pytorch, Albumentations
@@ -95,24 +114,6 @@ pipeline = Pipeline(training_type="easy")
 pipeline.run()
 ```
 The training logs, model checkpoints, and performance graphs will be saved to the `results/` directory.
-
-### Training Strategy
-
-This project follows a robust training strategy to improve generalization and ensure fair evaluation:
-
-* **Cross-validation (Stratified Group K-Fold)**: Splits are created using `StratifiedGroupKFold` on binned `qplume` values while grouping by acquisition day to avoid temporal leakage between folds.
-* **Outlier handling**: The top 5% of `qplume` values are removed before splitting to avoid overfitting to extreme plume cases.
-* **Data augmentation**: Training uses `albumentations` to apply random rotations and flips, plus normalization, on multi-channel inputs (RGB + `mag1c` + SWIR).
-* **Multi-channel fusion**: Input tensors are built by concatenating RGB, `mag1c`, and SWIR bands into a single 12-channel tensor.
-* **Two-phase fine-tuning**:
-  * Phase 1: Freeze the encoder and train the decoder/head.
-  * Phase 2: Unfreeze the encoder for full fine-tuning.
-* **Optimizer & scheduler**:
-  * Adam optimizer with separate learning rates for encoder and decoder.
-  * Cosine decay learning rate schedule with a linear warmup.
-* **Loss & metrics**:
-  * Dice loss (or combined Dice + BCE) is used for training.
-  * Validation is tracked via IoU (Jaccard) and the best validation loss is used for checkpointing.
 
 #### 2. Evaluating the Model
 
